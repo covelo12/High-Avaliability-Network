@@ -12,6 +12,18 @@ ip 200.2.2.100/24 200.2.2.10
 save
 ```
 
+## PC3
+```shell
+ip 200.2.2.200/24 200.2.2.10
+save
+```
+
+## PC4
+```shell
+ip 192.1.1.100/24 192.1.1.200/24
+save
+```
+
 ## Load-Balancers
 
 ### LB1A
@@ -168,12 +180,14 @@ set interfaces ethernet eth0 address 10.0.3.2/24
 set interfaces ethernet eth1 address 10.0.7.1/24
 set interfaces ethernet eth2 address 10.0.5.2/24
 set interfaces ethernet eth3 address 10.0.8.1/24
+set interfaces ethernet eth4 address 10.0.12.1/24
 
 set nat source rule 10 outbound-interface eth3
 set nat source rule 10 outbound-interface eth1
 set nat source rule 10 source address 10.0.0.0/8 
 set nat source rule 10 translation address 192.1.0.1-192.1.0.10
 
+set protocols static route 192.1.1.0/24 next-hop 10.0.12.2
 set protocols static route 0.0.0.0/0 next-hop 10.0.7.2
 set protocols static route 0.0.0.0/0 next-hop 10.0.8.2
 set protocols static route 10.2.2.0/24 next-hop 10.0.3.1
@@ -184,6 +198,62 @@ commit
 save
 exit
 ```
+
+```shell
+configure
+
+set zone-policy zone INSIDE description "Inside (Internal Network)"
+set zone-policy zone INSIDE interface eth0
+set zone-policy zone INSIDE interface eth2
+set zone-policy zone INSIDE default-action drop
+set zone-policy zone OUTSIDE description "Outside (Internet)"
+set zone-policy zone OUTSIDE default-action drop
+set zone-policy zone OUTSIDE interface eth1
+set zone-policy zone OUTSIDE interface eth3
+set zone-policy zone DMZ description "DMZ (Server Farm)"
+set zone-policy zone DMZ interface eth4
+set zone-policy zone DMZ default-action drop
+
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 action accept
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 protocol icmp
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 icmp type 8
+
+set firewall name TO-INSIDE rule 10 description "Accept Established-Related Connections"
+set firewall name TO-INSIDE rule 10 action accept
+set firewall name TO-INSIDE rule 10 state established enable
+set firewall name TO-INSIDE rule 10 state related enable
+
+set firewall name FROM-INSIDE-TO-DMZ rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-INSIDE-TO-DMZ rule 10 action accept
+set firewall name FROM-INSIDE-TO-DMZ rule 10 protocol icmp
+set firewall name FROM-INSIDE-TO-DMZ rule 10 icmp type 8
+set firewall name FROM-INSIDE-TO-DMZ rule 10 destination address 192.1.1.100
+
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 action accept
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 protocol icmp
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 icmp type 8
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 destination address 192.1.1.100
+
+set firewall name FROM-DMZ-TO-OUTSIDE rule 10 description "Accept Established-Related Connections"
+set firewall name FROM-DMZ-TO-OUTSIDE rule 10 action accept
+set firewall name FROM-DMZ-TO-OUTSIDE rule 10 state established enable
+set firewall name FROM-DMZ-TO-OUTSIDE rule 10 state related enable
+
+set zone-policy zone INSIDE from OUTSIDE firewall name TO-INSIDE
+set zone-policy zone OUTSIDE from INSIDE firewall name FROM-INSIDE-TO-OUTSIDE
+set zone-policy zone INSIDE from DMZ firewall name TO-INSIDE
+set zone-policy zone DMZ from INSIDE firewall name FROM-INSIDE-TO-DMZ
+set zone-policy zone OUTSIDE from DMZ firewall name FROM-DMZ-TO-OUTSIDE
+set zone-policy zone DMZ from OUTSIDE firewall name FROM-OUTSIDE-TO-DMZ
+
+commit
+save
+exit
+```
+
+
 
 ### FW2
 
@@ -196,8 +266,10 @@ set interfaces ethernet eth0 address 10.0.6.2/24
 set interfaces ethernet eth1 address 10.0.11.1/24
 set interfaces ethernet eth2 address 10.0.4.2/24
 set interfaces ethernet eth3 address 10.0.9.2/24
+set interfaces ethernet eth4 address 10.0.13.2/24
 
 
+set protocols static route 192.1.1.0/24 next-hop 10.0.13.1
 set protocols static route 0.0.0.0/0 next-hop 10.0.9.1
 set protocols static route 0.0.0.0/0 next-hop 10.0.11.2
 set protocols static route 10.2.2.0/24 next-hop 10.0.4.1
@@ -227,8 +299,8 @@ interface f0/1
 ip address 10.2.2.10 255.255.255.0
 no shutdown
 
-ip route 0.0.0.0 0.0.0.0  10.1.1.1
-ip route 0.0.0.0 0.0.0.0  10.1.1.2
+ip route 0.0.0.0 0.0.0.0 10.1.1.1
+ip route 0.0.0.0 0.0.0.0 10.1.1.2
 end
 write
 ```
@@ -248,6 +320,32 @@ no shutdown
   
 ip route 192.1.0.0 255.255.255.0 200.1.1.2 
 ip route 192.1.0.0 255.255.255.0 200.1.1.1
+ip route 0.0.0.0 0.0.0.0 200.1.1.1
+ip route 0.0.0.0 0.0.0.0 200.1.1.2
+
+end
+write
+```
+
+### Router 3
+```shell 
+conf t
+
+interface f0/0
+ip address 10.0.12.2 255.255.255.0
+no shutdown
+
+interface f0/1
+ip address 10.0.13.1 255.255.255.0
+no shutdown
+
+interface f1/0
+ip address 192.1.1.200 255.255.255.0
+no shutdown
+
+  
+ip route 0.0.0.0 0.0.0.0 10.0.12.1
+ip route 0.0.0.0 0.0.0.0 10.0.13.2
 
 end
 write
