@@ -193,15 +193,6 @@ set protocols static route 0.0.0.0/0 next-hop 10.0.8.2
 set protocols static route 10.2.2.0/24 next-hop 10.0.3.1
 set protocols static route 10.2.2.0/24 next-hop 10.0.5.1
 
-
-commit 
-save
-exit
-```
-
-```shell
-configure
-
 set zone-policy zone INSIDE description "Inside (Internal Network)"
 set zone-policy zone INSIDE interface eth0
 set zone-policy zone INSIDE interface eth2
@@ -280,11 +271,55 @@ set nat source rule 10 outbound-interface eth1
 set nat source rule 10 source address 10.0.0.0/8 
 set nat source rule 10 translation address 192.1.0.11-192.1.0.20
 
+set zone-policy zone INSIDE description "Inside (Internal Network)"
+set zone-policy zone INSIDE interface eth0
+set zone-policy zone INSIDE interface eth2
+set zone-policy zone INSIDE default-action drop
+set zone-policy zone OUTSIDE description "Outside (Internet)"
+set zone-policy zone OUTSIDE default-action drop
+set zone-policy zone OUTSIDE interface eth1
+set zone-policy zone OUTSIDE interface eth3
+set zone-policy zone DMZ description "DMZ (Server Farm)"
+set zone-policy zone DMZ interface eth4
+set zone-policy zone DMZ default-action drop
+
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 action accept
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 protocol icmp
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 icmp type 8
+
+set firewall name TO-INSIDE rule 10 description "Accept Established-Related Connections"
+set firewall name TO-INSIDE rule 10 action accept
+set firewall name TO-INSIDE rule 10 state established enable
+set firewall name TO-INSIDE rule 10 state related enable
+
+set firewall name FROM-INSIDE-TO-DMZ rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-INSIDE-TO-DMZ rule 10 action accept
+set firewall name FROM-INSIDE-TO-DMZ rule 10 protocol icmp
+set firewall name FROM-INSIDE-TO-DMZ rule 10 icmp type 8
+set firewall name FROM-INSIDE-TO-DMZ rule 10 destination address 192.1.1.100
+
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 action accept
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 protocol icmp
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 icmp type 8
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 destination address 192.1.1.100
+
+set firewall name FROM-DMZ-TO-OUTSIDE rule 10 description "Accept Established-Related Connections"
+set firewall name FROM-DMZ-TO-OUTSIDE rule 10 action accept
+set firewall name FROM-DMZ-TO-OUTSIDE rule 10 state established enable
+set firewall name FROM-DMZ-TO-OUTSIDE rule 10 state related enable
+
+set zone-policy zone INSIDE from OUTSIDE firewall name TO-INSIDE
+set zone-policy zone OUTSIDE from INSIDE firewall name FROM-INSIDE-TO-OUTSIDE
+set zone-policy zone INSIDE from DMZ firewall name TO-INSIDE
+set zone-policy zone DMZ from INSIDE firewall name FROM-INSIDE-TO-DMZ
+set zone-policy zone OUTSIDE from DMZ firewall name FROM-DMZ-TO-OUTSIDE
+set zone-policy zone DMZ from OUTSIDE firewall name FROM-OUTSIDE-TO-DMZ
+
 commit
 save
 exit
-```
-
 
 ## Routers
 ### Router 1
