@@ -12,13 +12,13 @@ ip 200.2.2.100/24 200.2.2.10
 save
 ```
 
-## PC3
+## PC3(Blocked Computer)
 ```shell
 ip 200.2.2.200/24 200.2.2.10
 save
 ```
 
-## PC4
+## PC4(DMZ)
 ```shell
 ip 192.1.1.100/24 192.1.1.200/24
 save
@@ -244,8 +244,6 @@ save
 exit
 ```
 
-
-
 ### FW2
 
 ```shell
@@ -320,6 +318,7 @@ set zone-policy zone DMZ from OUTSIDE firewall name FROM-OUTSIDE-TO-DMZ
 commit
 save
 exit
+```
 
 ## Routers
 ### Router 1
@@ -362,7 +361,7 @@ end
 write
 ```
 
-### Router 3
+### Router 3(DMZ)
 ```shell 
 conf t
 
