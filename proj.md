@@ -315,10 +315,16 @@ set zone-policy zone DMZ from INSIDE firewall name FROM-INSIDE-TO-DMZ
 set zone-policy zone OUTSIDE from DMZ firewall name FROM-DMZ-TO-OUTSIDE
 set zone-policy zone DMZ from OUTSIDE firewall name FROM-OUTSIDE-TO-DMZ
 
+
+
 commit
 save
 exit
 ```
+set firewall group address-group ddos-attackers address 200.2.2.200
+set firewall rule 100 family inet source-address-group ddos-attackers reject
+set interfaces ethernet eth1 firewall rule 100
+set interfaces ethernet eth2 firewall rule 100
 
 ## Routers
 ### Router 1
@@ -351,9 +357,6 @@ interface f0/1
 ip address 200.2.2.10 255.255.255.0
 no shutdown
 
-  
-ip route 192.1.0.0 255.255.255.0 200.1.1.2 
-ip route 192.1.0.0 255.255.255.0 200.1.1.1
 ip route 0.0.0.0 0.0.0.0 200.1.1.1
 ip route 0.0.0.0 0.0.0.0 200.1.1.2
 
