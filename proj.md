@@ -170,6 +170,28 @@ save
 exit
 ```
 
+### LB3
+```shell
+configure
+set system host-name LB3
+
+set interfaces ethernet eth0 address 192.1.1.200/24 
+set interfaces ethernet eth1 address 10.0.12.2/24 
+set interfaces ethernet eth2 address 10.0.13.1/24
+
+set load-balancing wan interface-health eth1 nexthop 10.0.12.1
+set load-balancing wan interface-health eth2 nexthop 10.0.13.2
+set load-balancing wan rule 1 inbound-interface eth0
+set load-balancing wan rule 1 interface eth1 weight 1 
+set load-balancing wan rule 1 interface eth2 weight 1 
+set load-balancing wan sticky-connections inbound 
+set load-balancing wan disable-source-nat
+
+commit
+save
+exit
+```
+
 ## Firewalls
 
 ### FW1
@@ -325,7 +347,8 @@ commit
 save
 exit
 ```
-
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 source address 200.2.2.0/24
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 action drop
 ## Routers
 ### Router 1
 ```shell 
@@ -364,26 +387,4 @@ end
 write
 ```
 
-### Router 3(DMZ)
-```shell 
-conf t
 
-interface f0/0
-ip address 10.0.12.2 255.255.255.0
-no shutdown
-
-interface f0/1
-ip address 10.0.13.1 255.255.255.0
-no shutdown
-
-interface f1/0
-ip address 192.1.1.200 255.255.255.0
-no shutdown
-
-  
-ip route 0.0.0.0 0.0.0.0 10.0.12.1
-ip route 0.0.0.0 0.0.0.0 10.0.13.2
-
-end
-write
-```
