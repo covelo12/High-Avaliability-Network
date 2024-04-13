@@ -183,9 +183,11 @@ set interfaces ethernet eth3 address 10.0.8.1/24
 set interfaces ethernet eth4 address 10.0.12.1/24
 
 set nat source rule 10 outbound-interface eth3
-set nat source rule 10 outbound-interface eth1
 set nat source rule 10 source address 10.0.0.0/8 
 set nat source rule 10 translation address 192.1.0.1-192.1.0.10
+set nat source rule 20 outbound-interface eth1
+set nat source rule 20 source address 10.0.0.0/8 
+set nat source rule 20 translation address 192.1.0.1-192.1.0.10
 
 set protocols static route 192.1.1.0/24 next-hop 10.0.12.2
 set protocols static route 0.0.0.0/0 next-hop 10.0.7.2
@@ -265,9 +267,11 @@ set protocols static route 10.2.2.0/24 next-hop 10.0.4.1
 set protocols static route 10.2.2.0/24 next-hop 10.0.6.1
 
 set nat source rule 10 outbound-interface eth3
-set nat source rule 10 outbound-interface eth1
 set nat source rule 10 source address 10.0.0.0/8 
 set nat source rule 10 translation address 192.1.0.11-192.1.0.20
+set nat source rule 20 outbound-interface eth1
+set nat source rule 20 source address 10.0.0.0/8 
+set nat source rule 20 translation address 192.1.0.11-192.1.0.20
 
 set zone-policy zone INSIDE description "Inside (Internal Network)"
 set zone-policy zone INSIDE interface eth0
@@ -321,10 +325,6 @@ commit
 save
 exit
 ```
-set firewall group address-group ddos-attackers address 200.2.2.200
-set firewall rule 100 family inet source-address-group ddos-attackers reject
-set interfaces ethernet eth1 firewall rule 100
-set interfaces ethernet eth2 firewall rule 100
 
 ## Routers
 ### Router 1
