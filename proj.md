@@ -18,9 +18,22 @@ ip 200.2.2.200/24 200.2.2.10
 save
 ```
 
-## PC4(DMZ)
+## DMZ-Server
 ```shell
-ip 192.1.1.100/24 192.1.1.200/24
+configure
+set system host-name DMZ
+set interfaces ethernet eth0 address 192.1.1.100/24
+
+set protocols static route 0.0.0.0/0 next-hop 192.1.1.200
+
+commit
+save
+exit
+```
+
+## PC5
+```shell
+ip 10.3.3.100/24 10.3.3.10/24
 save
 ```
 
@@ -31,13 +44,15 @@ save
 configure
 set system host-name LB1A
 set interfaces ethernet eth0 address 10.1.1.1/24
-set interfaces ethernet eth1 address 10.0.3.1/24
+set interfaces ethernet eth1 address 10.0.4.1/24
 set interfaces ethernet eth2 address 10.0.0.2/24
-set interfaces ethernet eth3 address 10.0.4.1/24
-set protocols static route 10.2.2.0/24 next-hop 10.1.1.10
+set interfaces ethernet eth3 address 10.0.3.1/24
 
-set load-balancing wan interface-health eth1 nexthop 10.0.3.2
-set load-balancing wan interface-health eth3 nexthop 10.0.4.2 
+set protocols static route 10.0.0.0/8 next-hop 10.1.1.10
+
+
+set load-balancing wan interface-health eth3 nexthop 10.0.3.2
+set load-balancing wan interface-health eth1 nexthop 10.0.4.2 
 set load-balancing wan rule 1 inbound-interface eth0 
 set load-balancing wan rule 1 interface eth1 weight 1 
 set load-balancing wan rule 1 interface eth3 weight 1 
@@ -65,15 +80,14 @@ exit
 ```shell
 configure 
 set system host-name LB2A
-
-set interfaces ethernet eth0 address 10.0.7.2/24 
+set interfaces ethernet eth0 address 10.0.9.1/24 
 set interfaces ethernet eth1 address 200.1.1.1/24 
 set interfaces ethernet eth2 address 10.0.10.1/24 
-set interfaces ethernet eth3 address 10.0.9.1/24 
+set interfaces ethernet eth3 address 10.0.7.2/24 
 set protocols static route 200.2.2.0/24 next-hop 200.1.1.10 
 
-set load-balancing wan interface-health eth0 nexthop 10.0.7.1
-set load-balancing wan interface-health eth3 nexthop 10.0.9.2 
+set load-balancing wan interface-health eth0 nexthop 10.0.9.2 
+set load-balancing wan interface-health eth3 nexthop 10.0.7.1
 set load-balancing wan rule 1 inbound-interface eth1 
 set load-balancing wan rule 1 interface eth0 weight 1 
 set load-balancing wan rule 1 interface eth3 weight 1 
@@ -106,7 +120,7 @@ set interfaces ethernet eth0 address 10.1.1.2/24
 set interfaces ethernet eth1 address 10.0.6.1/24
 set interfaces ethernet eth2 address 10.0.0.1/24
 set interfaces ethernet eth3 address 10.0.5.1/24
-set protocols static route 10.2.2.0/24 next-hop 10.1.1.10
+set protocols static route 10.0.0.0/8 next-hop 10.1.1.10
 
 set load-balancing wan interface-health eth1 nexthop 10.0.6.2
 set load-balancing wan interface-health eth3 nexthop 10.0.5.2 
@@ -214,8 +228,8 @@ set nat source rule 20 translation address 192.1.0.1-192.1.0.10
 set protocols static route 192.1.1.0/24 next-hop 10.0.12.2
 set protocols static route 0.0.0.0/0 next-hop 10.0.7.2
 set protocols static route 0.0.0.0/0 next-hop 10.0.8.2
-set protocols static route 10.2.2.0/24 next-hop 10.0.3.1
-set protocols static route 10.2.2.0/24 next-hop 10.0.5.1
+set protocols static route 10.0.0.0/8 next-hop 10.0.3.1
+set protocols static route 10.0.0.0/8 next-hop 10.0.5.1
 
 set zone-policy zone INSIDE description "Inside (Internal Network)"
 set zone-policy zone INSIDE interface eth0
@@ -229,27 +243,62 @@ set zone-policy zone DMZ description "DMZ (Server Farm)"
 set zone-policy zone DMZ interface eth4
 set zone-policy zone DMZ default-action drop
 
-set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 description "Accept UDP Echo Request"
 set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 action accept
-set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 protocol icmp
-set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 icmp type 8
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 protocol udp
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 destination port 2000-4000
 
 set firewall name TO-INSIDE rule 10 description "Accept Established-Related Connections"
 set firewall name TO-INSIDE rule 10 action accept
 set firewall name TO-INSIDE rule 10 state established enable
 set firewall name TO-INSIDE rule 10 state related enable
 
-set firewall name FROM-INSIDE-TO-DMZ rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-INSIDE-TO-DMZ rule 10 description "Accept UDP Echo Request"
 set firewall name FROM-INSIDE-TO-DMZ rule 10 action accept
-set firewall name FROM-INSIDE-TO-DMZ rule 10 protocol icmp
-set firewall name FROM-INSIDE-TO-DMZ rule 10 icmp type 8
-set firewall name FROM-INSIDE-TO-DMZ rule 10 destination address 192.1.1.100
+set firewall name FROM-INSIDE-TO-DMZ rule 10 protocol udp
+set firewall name FROM-INSIDE-TO-DMZ rule 10 destination port 2000-4000
+set firewall name FROM-INSIDE-TO-DMZ rule 10 destination address 192.1.1.0/24
 
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 description "Accept ICMP Echo Request"
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 action accept
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 protocol icmp
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 icmp type 8
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 destination address 192.1.1.100
+set firewall name FROM-INSIDE-TO-DMZ rule 20 description "Accept SSH from IT Personel Only"
+set firewall name FROM-INSIDE-TO-DMZ rule 20 action accept
+set firewall name FROM-INSIDE-TO-DMZ rule 20 destination address 192.1.1.0/24
+set firewall name FROM-INSIDE-TO-DMZ rule 20 destination port 22
+set firewall name FROM-INSIDE-TO-DMZ rule 20 protocol tcp
+set firewall name FROM-INSIDE-TO-DMZ rule 20 source address 10.3.3.0/24
+
+set firewall name FROM-INSIDE-TO-DMZ rule 30 description "Accept DNS access"
+set firewall name FROM-INSIDE-TO-DMZ rule 30 action accept
+set firewall name FROM-INSIDE-TO-DMZ rule 30 destination address 192.1.1.100/24
+set firewall name FROM-INSIDE-TO-DMZ rule 30 destination port 53
+set firewall name FROM-INSIDE-TO-DMZ rule 30 protocol tcp_udp
+
+set firewall name FROM-INSIDE-TO-DMZ rule 40 description "Accept HTTP, HTTPS"
+set firewall name FROM-INSIDE-TO-DMZ rule 40 action accept
+set firewall name FROM-INSIDE-TO-DMZ rule 40 destination address 192.1.1.100/24
+set firewall name FROM-INSIDE-TO-DMZ rule 40 destination port 80,443
+set firewall name FROM-INSIDE-TO-DMZ rule 40 protocol tcp
+set firewall name FROM-INSIDE-TO-DMZ rule 40 source address 10.0.0.0/8
+
+set firewall group address-group BLOCKED_IPS address 200.2.2.200
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 action drop
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 protocol all
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 source group address-group 'BLOCKED_IPS'
+
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 description "Accept UDP Echo Request"
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 action accept
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 protocol udp
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 destination port 2000-4000
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 destination address 192.1.1.100/24
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 source address !10.0.0.0/8
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 source address !192.1.0.0/28
+
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 description "Accept HTTPS"
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 action accept
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 destination address 192.1.1.100/24
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 destination port 443
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 protocol tcp
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 source address !10.0.0.0/8
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 source address !192.1.0.0/28
 
 set firewall name FROM-DMZ-TO-OUTSIDE rule 10 description "Accept Established-Related Connections"
 set firewall name FROM-DMZ-TO-OUTSIDE rule 10 action accept
@@ -285,8 +334,8 @@ set interfaces ethernet eth4 address 10.0.13.2/24
 set protocols static route 192.1.1.0/24 next-hop 10.0.13.1
 set protocols static route 0.0.0.0/0 next-hop 10.0.9.1
 set protocols static route 0.0.0.0/0 next-hop 10.0.11.2
-set protocols static route 10.2.2.0/24 next-hop 10.0.4.1
-set protocols static route 10.2.2.0/24 next-hop 10.0.6.1
+set protocols static route 10.0.0.0/8 next-hop 10.0.4.1
+set protocols static route 10.0.0.0/8 next-hop 10.0.6.1
 
 set nat source rule 10 outbound-interface eth3
 set nat source rule 10 source address 10.0.0.0/8 
@@ -307,27 +356,62 @@ set zone-policy zone DMZ description "DMZ (Server Farm)"
 set zone-policy zone DMZ interface eth4
 set zone-policy zone DMZ default-action drop
 
-set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 description "Accept UDP Echo Request"
 set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 action accept
-set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 protocol icmp
-set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 icmp type 8
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 protocol udp
+set firewall name FROM-INSIDE-TO-OUTSIDE rule 10 destination port 2000-4000
 
 set firewall name TO-INSIDE rule 10 description "Accept Established-Related Connections"
 set firewall name TO-INSIDE rule 10 action accept
 set firewall name TO-INSIDE rule 10 state established enable
 set firewall name TO-INSIDE rule 10 state related enable
 
-set firewall name FROM-INSIDE-TO-DMZ rule 10 description "Accept ICMP Echo Request"
+set firewall name FROM-INSIDE-TO-DMZ rule 10 description "Accept UDP Echo Request"
 set firewall name FROM-INSIDE-TO-DMZ rule 10 action accept
-set firewall name FROM-INSIDE-TO-DMZ rule 10 protocol icmp
-set firewall name FROM-INSIDE-TO-DMZ rule 10 icmp type 8
-set firewall name FROM-INSIDE-TO-DMZ rule 10 destination address 192.1.1.100
+set firewall name FROM-INSIDE-TO-DMZ rule 10 protocol udp
+set firewall name FROM-INSIDE-TO-DMZ rule 10 destination port 2000-4000
+set firewall name FROM-INSIDE-TO-DMZ rule 10 destination address 192.1.1.0/24
 
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 description "Accept ICMP Echo Request"
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 action accept
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 protocol icmp
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 icmp type 8
-set firewall name FROM-OUTSIDE-TO-DMZ rule 10 destination address 192.1.1.100
+set firewall name FROM-INSIDE-TO-DMZ rule 20 description "Accept SSH from IT Personel Only"
+set firewall name FROM-INSIDE-TO-DMZ rule 20 action accept
+set firewall name FROM-INSIDE-TO-DMZ rule 20 destination address 192.1.1.0/24
+set firewall name FROM-INSIDE-TO-DMZ rule 20 destination port 22
+set firewall name FROM-INSIDE-TO-DMZ rule 20 protocol tcp
+set firewall name FROM-INSIDE-TO-DMZ rule 20 source address 10.3.3.0/24
+
+set firewall name FROM-INSIDE-TO-DMZ rule 30 description "Accept DNS access"
+set firewall name FROM-INSIDE-TO-DMZ rule 30 action accept
+set firewall name FROM-INSIDE-TO-DMZ rule 30 destination address 192.1.1.100/24
+set firewall name FROM-INSIDE-TO-DMZ rule 30 destination port 53
+set firewall name FROM-INSIDE-TO-DMZ rule 30 protocol tcp_udp
+
+set firewall name FROM-INSIDE-TO-DMZ rule 40 description "Accept HTTP, HTTPS"
+set firewall name FROM-INSIDE-TO-DMZ rule 40 action accept
+set firewall name FROM-INSIDE-TO-DMZ rule 40 destination address 192.1.1.100/24
+set firewall name FROM-INSIDE-TO-DMZ rule 40 destination port 80,443
+set firewall name FROM-INSIDE-TO-DMZ rule 40 protocol tcp
+set firewall name FROM-INSIDE-TO-DMZ rule 40 source address 10.0.0.0/8
+
+set firewall group address-group BLOCKED_IPS address 200.2.2.200
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 action drop
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 protocol all
+set firewall name FROM-OUTSIDE-TO-DMZ rule 10 source group address-group 'BLOCKED_IPS'
+
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 description "Accept UDP Echo Request"
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 action accept
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 protocol udp
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 destination port 2000-4000
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 destination address 192.1.1.100/24
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 source address !10.0.0.0/8
+set firewall name FROM-OUTSIDE-TO-DMZ rule 20 source address !192.1.0.0/28
+
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 description "Accept HTTPS"
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 action accept
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 destination address 192.1.1.100/24
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 destination port 443
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 protocol tcp
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 source address !10.0.0.0/8
+set firewall name FROM-OUTSIDE-TO-DMZ rule 40 source address !192.1.0.0/28
 
 set firewall name FROM-DMZ-TO-OUTSIDE rule 10 description "Accept Established-Related Connections"
 set firewall name FROM-DMZ-TO-OUTSIDE rule 10 action accept
@@ -341,14 +425,14 @@ set zone-policy zone DMZ from INSIDE firewall name FROM-INSIDE-TO-DMZ
 set zone-policy zone OUTSIDE from DMZ firewall name FROM-DMZ-TO-OUTSIDE
 set zone-policy zone DMZ from OUTSIDE firewall name FROM-OUTSIDE-TO-DMZ
 
-
-
 commit
 save
 exit
 ```
-set firewall name FROM-OUTSIDE-TO-DMZ rule 20 source address 200.2.2.0/24
-set firewall name FROM-OUTSIDE-TO-DMZ rule 20 action drop
+
+
+
+
 ## Routers
 ### Router 1
 ```shell 
@@ -360,6 +444,10 @@ no shutdown
 
 interface f0/1
 ip address 10.2.2.10 255.255.255.0
+no shutdown
+
+interface f1/0
+ip address 10.3.3.10 255.255.255.0
 no shutdown
 
 ip route 0.0.0.0 0.0.0.0 10.1.1.1
@@ -386,5 +474,3 @@ ip route 0.0.0.0 0.0.0.0 200.1.1.2
 end
 write
 ```
-
-
